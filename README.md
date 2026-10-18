@@ -37,15 +37,29 @@ python -m pip install -e "./servidor-mcp[test]" -e "./agente[test]"
 
 ### 3. Segredo do `requestState`
 
-O `requestState` é selado pelo servidor MCP (veja *Decisões técnicas*). O segredo vem **só de variável de ambiente**, nunca do repositório, e precisa ter pelo menos 32 bytes. Gere um:
+O `requestState` é selado pelo servidor MCP (veja *Decisões técnicas*). O segredo vem **somente de uma variável de ambiente**, nunca do repositório, e precisa ter pelo menos 32 bytes.
+
+Gere o segredo e exporte-o no primeiro terminal:
 
 ```bash
 export REQUEST_STATE_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 ```
 
-`token_hex(32)` produz 64 caracteres hexadecimais (32 bytes de entropia). Sem a variável, ou com menos de 32 bytes, o servidor MCP recusa subir.
+Para visualizar o valor gerado e copiá-lo para o segundo terminal, execute:
 
-Quem lê o segredo é o servidor MCP; o agente trata o `requestState` como opaco e apenas o devolve, então não o lê. Para evitar surpresas, use o mesmo `export` nos dois terminais: é inofensivo no agente e garante que, se o servidor for reiniciado com o mesmo valor, os estados pausados continuam válidos.
+```bash
+echo "$REQUEST_STATE_SECRET"
+```
+
+**Importante:** o comando `echo` exibe o segredo em texto puro. Não compartilhe esse valor, não o inclua no repositório e não o adicione aos logs ou à documentação. Gere um segredo novo para cada ambiente.
+
+`token_hex(32)` produz 64 caracteres hexadecimais, correspondentes a 32 bytes de entropia. Sem a variável, ou com menos de 32 bytes, o servidor MCP recusa subir.
+
+Quem lê o segredo é o servidor MCP. O agente trata o `requestState` como opaco e apenas o devolve, sem interpretar seu conteúdo.
+
+Para executar o projeto, use o mesmo valor de `REQUEST_STATE_SECRET` nos dois terminais. Se o servidor MCP for reiniciado com o mesmo segredo, os `requestState` emitidos anteriormente continuam verificáveis, desde que ainda estejam dentro do prazo de validade.
+
+Não gere um segredo novo entre o início de uma operação e sua retomada, pois isso pode invalidar os estados pausados existentes.
 
 ### 4. Servidor MCP (terminal 1)
 
